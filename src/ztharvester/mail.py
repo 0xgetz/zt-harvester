@@ -91,24 +91,34 @@ class MailProvider:
             if not domains:
                 raise RuntimeError("mail provider returned no active domains")
             domain = secrets.choice(domains)
-        username = _rand_username(prefix)
-        address = f"{username}@{domain}"
-        password = _rand_password()
-        r = await self.client.post(
-            f"{self.base_url}/accounts",
-            json={"address": address, "password": password},
-        )
-        if r.status_code >= 400:
-            raise RuntimeError(f"mailbox creation failed: {r.status_code} {r.text[:200]}")
-        body = r.json()
-        mb = Mailbox(
-            address=address,
-            password=password,
-            domain=domain,
-            account_id=body.get("id"),
-        )
-        await self.login(mb)
-        return mb
+        last_error = ""
+        for attempt in range(5):
+            username = _rand_username(prefix)
+            address = f"{username}@{domain}"
+            password = _rand_password()
+            r = await self.client.post(
+                f"{self.base_url}/accounts",
+                json={"address": address, "password": password},
+            )
+            if r.status_code == 429:
+                last_error = "429 rate limited"
+                await asyncio.sleep(5 * (attempt + 1))
+                continue
+            if r.status_code >= 400:
+                last_error = f"{r.status_code} {r.text[:200]}"
+                # Retry with a fresh username for validation-style errors.
+                await asyncio.sleep(1)
+                continue
+            body = r.json()
+            mb = Mailbox(
+                address=address,
+                password=password,
+                domain=domain,
+                account_id=body.get("id"),
+            )
+            await self.login(mb)
+            return mb
+        raise RuntimeError(f"mailbox creation failed: {last_error}")
 
     async def login(self, mailbox: Mailbox) -> str:
         r = await self.client.post(

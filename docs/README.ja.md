@@ -161,6 +161,7 @@ assets/        logo
 - ZeroTwo の edge は JWT に加えて `cf_clearance` Cookie と CSRF トークンが必要です。一度 shim にエクスポートしてください。
 - shim は単一プロセスで全アカウントを処理し、JWT はリクエストごとに `Authorization` から読み取ります。
 - 責任を持って、作成権限のあるアカウントにのみ使用してください。
+- ZeroTwo と mail.tm は IP ごと・アドレスごとのレート制限を適用します。`--concurrency` は低め（1–2）にし、実行間隔を空け、一時的な `429` はリトライに任せてください。
 
 ## License
 

@@ -161,6 +161,7 @@ assets/        logo
 - ZeroTwo 的边缘除 JWT 外还需要 `cf_clearance` Cookie 与 CSRF 令牌；请一次性导出到 shim。
 - shim 以单进程服务所有采集账号 —— JWT 按请求从 `Authorization` 读取。
 - 请负责任地使用，仅用于你有权创建的账号。
+- 与 ZeroTwo 和 mail.tm 都存在基于 IP 和地址的速率限制。请保持较低 `--concurrency`（1–2），间隔运行，并让重试处理临时 `429`。
 
 ## License
 

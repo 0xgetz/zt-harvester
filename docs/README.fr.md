@@ -161,6 +161,7 @@ assets/        logo
 - L'edge de ZeroTwo exige le cookie `cf_clearance` et un jeton CSRF en plus du JWT ; exportez-les une fois vers le shim.
 - Le shim sert tous les comptes depuis un seul processus — le JWT est lu par requête depuis `Authorization`.
 - À utiliser de façon responsable et uniquement sur des comptes que vous êtes autorisé à créer.
+- ZeroTwo et mail.tm appliquent des limites par IP et par adresse. Gardez `--concurrency` bas (1–2), espacez les exécutions et laissez les réessais gérer les `429` transitoires.
 
 ## License
 
