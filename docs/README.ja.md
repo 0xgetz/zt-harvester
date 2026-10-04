@@ -100,7 +100,17 @@ zt-harvester run \
 | --- | --- |
 | `zt-harvester run -n 5` | N 個のアカウントを作成・収集・接続 |
 | `zt-harvester shim -p 8787` | OpenAI 互換 ZeroTwo shim を実行 |
+| `zt-harvester proxies --check` | プロキシプールを一覧・テスト |
 | `zt-harvester export -f csv` | 収集レジャーをエクスポート |
+
+## プロキシプール
+
+アカウントごとに出口 IP をローテーションして IP 単位のレート制限を分散します。一般的な `host:port:user:pass` 形式に対応。
+
+```bash
+zt-harvester run -n 10 --proxy-file proxies.txt
+zt-harvester proxies --proxy-file proxies.txt --check
+```
 
 ## Python API
 

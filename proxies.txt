@@ -1,0 +1,11 @@
+# One proxy per line, host:port:user:pass (scheme optional)
+31.59.20.176:6754:ipqievzh:wd6foi2vce6h
+45.38.107.97:6014:ipqievzh:wd6foi2vce6h
+64.137.96.74:6641:ipqievzh:wd6foi2vce6h
+198.23.243.226:6361:ipqievzh:wd6foi2vce6h
+38.154.185.97:6370:ipqievzh:wd6foi2vce6h
+84.247.60.125:6095:ipqievzh:wd6foi2vce6h
+142.111.67.146:5611:ipqievzh:wd6foi2vce6h
+191.96.254.138:6185:ipqievzh:wd6foi2vce6h
+31.58.9.4:6077:ipqievzh:wd6foi2vce6h
+198.46.161.42:5092:ipqievzh:wd6foi2vce6h

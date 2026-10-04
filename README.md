@@ -102,7 +102,38 @@ Every account lands in `harvest/sessions.jsonl` and in the 9Router dashboard.
 | --- | --- |
 | `zt-harvester run -n 5` | Create + harvest + connect N accounts |
 | `zt-harvester shim -p 8787` | Run the OpenAI-compatible ZeroTwo shim |
+| `zt-harvester proxies --check` | List and test the proxy pool |
 | `zt-harvester export -f csv` | Export the harvest ledger |
+
+## Proxy pool
+
+Spread the per-IP rate limits by rotating the exit IP per account. The pool
+accepts the common `host:port:user:pass` format.
+
+```bash
+# inline
+zt-harvester run -n 10 --proxy "31.59.20.176:6754:user:pass" --proxy "45.38.107.97:6014:user:pass"
+
+# from a file
+zt-harvester run -n 10 --proxy-file proxies.txt
+
+# verify reachability + exit IPs
+zt-harvester proxies --proxy-file proxies.txt --check
+```
+
+Proxies are applied to:
+
+- the harvester's own HTTP calls (mail.tm, 9Router) — via `httpx`;
+- a locally launched Chromium — via `--proxy-server=<url>`.
+
+> Cloud browsers created by the Browser Use API only accept a
+> `proxy_country_code`, not a custom proxy URL, so a pool is used with a local
+> Chromium launch (mode `cdp` without `--cdp-ws`/`--cdp-url`). Some reseller
+> pools restrict access to a whitelisted source IP — verify with
+> `zt-harvester proxies --check` before a long run.
+
+Set `ZT_PROXIES` (newline/comma separated) or `ZT_PROXY_FILE` to configure the
+pool through the environment.
 
 ## Python API
 

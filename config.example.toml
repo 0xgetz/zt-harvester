@@ -25,3 +25,16 @@ node_prefix = "zerotwo"
 mode = "cdp"          # cdp | cloud
 cdp_ws = "ws://127.0.0.1:9222/devtools/browser/<id>"
 headless = false
+
+[proxy]
+# Rotate the exit IP per account to spread per-IP rate limits.
+enabled = true
+scheme = "http"
+# host:port:user:pass entries; inline takes precedence over file
+inline = [
+  "31.59.20.176:6754:ipqievzh:wd6foi2vce6h",
+  "45.38.107.97:6014:ipqievzh:wd6foi2vce6h",
+  "64.137.96.74:6641:ipqievzh:wd6foi2vce6h",
+]
+# file = "proxies.txt"
+sticky = true

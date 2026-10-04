@@ -100,7 +100,17 @@ Cada cuenta queda en `harvest/sessions.jsonl` y en el panel de 9Router.
 | --- | --- |
 | `zt-harvester run -n 5` | Crear + recolectar + conectar N cuentas |
 | `zt-harvester shim -p 8787` | Ejecutar el shim ZeroTwo compatible con OpenAI |
+| `zt-harvester proxies --check` | Listar y probar el pool de proxies |
 | `zt-harvester export -f csv` | Exportar el registro |
+
+## Pool de proxies
+
+Distribuye los límites por IP rotando la IP de salida por cuenta. El pool acepta el formato común `host:port:user:pass`.
+
+```bash
+zt-harvester run -n 10 --proxy-file proxies.txt
+zt-harvester proxies --proxy-file proxies.txt --check
+```
 
 ## API de Python
 

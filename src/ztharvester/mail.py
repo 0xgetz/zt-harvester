@@ -57,13 +57,25 @@ class MailProvider:
     an inbound message and extract links / OTP codes from it.
     """
 
-    def __init__(self, base_url: str = "https://api.mail.tm", timeout: float = 30.0) -> None:
+    def __init__(
+        self,
+        base_url: str = "https://api.mail.tm",
+        timeout: float = 30.0,
+        proxy: str | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.proxy = proxy
         self._client: httpx.AsyncClient | None = None
 
+    def _client_kwargs(self) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {"timeout": self.timeout}
+        if self.proxy:
+            kwargs["proxy"] = self.proxy
+        return kwargs
+
     async def __aenter__(self) -> "MailProvider":
-        self._client = httpx.AsyncClient(timeout=self.timeout)
+        self._client = httpx.AsyncClient(**self._client_kwargs())
         await self._client.__aenter__()
         return self
 

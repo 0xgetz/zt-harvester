@@ -100,7 +100,17 @@ zt-harvester run \
 | --- | --- |
 | `zt-harvester run -n 5` | 创建 + 采集 + 连接 N 个账号 |
 | `zt-harvester shim -p 8787` | 运行兼容 OpenAI 的 ZeroTwo shim |
+| `zt-harvester proxies --check` | 列出并测试代理池 |
 | `zt-harvester export -f csv` | 导出采集账本 |
+
+## 代理池
+
+通过为每个账号轮换出口 IP 来分散基于 IP 的速率限制。支持常见的 `host:port:user:pass` 格式。
+
+```bash
+zt-harvester run -n 10 --proxy-file proxies.txt
+zt-harvester proxies --proxy-file proxies.txt --check
+```
 
 ## Python API
 

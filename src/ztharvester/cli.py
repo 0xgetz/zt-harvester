@@ -54,6 +54,8 @@ if typer is not None:
         router_url: str | None = typer.Option(None, "--router-url", help="9Router base URL"),
         shim_url: str | None = typer.Option(None, "--shim-base-url", help="OpenAI-compatible shim base URL"),
         no_router: bool = typer.Option(False, "--no-router", help="Skip 9Router registration"),
+        proxy: list[str] = typer.Option(None, "--proxy", help="Proxy host:port:user:pass (repeatable)"),
+        proxy_file: str | None = typer.Option(None, "--proxy-file", help="File with one proxy per line"),
         concurrency: int | None = typer.Option(None, "--concurrency", help="Parallel sign-ups"),
         output: str | None = typer.Option(None, "--output", "-o", help="Output directory"),
     ) -> None:
@@ -64,6 +66,12 @@ if typer is not None:
             if config and config.exists()
             else HarvesterConfig.from_env()
         )
+        if proxy:
+            cfg.proxy.enabled = True
+            cfg.proxy.inline = list(proxy)
+        if proxy_file:
+            cfg.proxy.enabled = True
+            cfg.proxy.file = proxy_file
         if cdp_ws:
             cfg.browser.cdp_ws = cdp_ws
         if cdp_url:
@@ -109,6 +117,67 @@ if typer is not None:
             print("uvicorn is required for the shim: pip install uvicorn", file=sys.stderr)
             raise typer.Exit(1)
         uvicorn.run(build_app(), host=host, port=port)
+
+    @app.command()
+    def proxies(
+        proxy: list[str] = typer.Option(None, "--proxy", help="Proxy host:port:user:pass (repeatable)"),
+        proxy_file: str | None = typer.Option(None, "--proxy-file"),
+        check: bool = typer.Option(False, "--check", help="Test each proxy exit IP"),
+    ) -> None:
+        """List and optionally test the proxy pool."""
+        from .proxy import ProxyPool
+
+        pool = ProxyPool.from_env()
+        for line in proxy or []:
+            pool.add(line)
+        if proxy_file:
+            from pathlib import Path
+
+            path = Path(proxy_file)
+            if path.exists():
+                for line in path.read_text().splitlines():
+                    pool.add(line)
+        c = _console()
+        if not pool:
+            msg = "no proxies configured (use --proxy or ZT_PROXIES)"
+            c.print(f"[yellow]{msg}[/yellow]") if c else print(msg)
+            return
+        if not check:
+            for i, p in enumerate(pool.proxies, 1):
+                print(f"{i:>2}  {p.url}")
+            return
+
+        import httpx
+
+        async def _test(p) -> tuple[str, bool, str]:
+            try:
+                async with httpx.AsyncClient(proxy=p.url, timeout=15) as h:
+                    r = await h.get("https://api.ipify.org?format=json")
+                    return p.url, True, r.json().get("ip", "")
+            except Exception as exc:  # noqa: BLE001
+                return p.url, False, str(exc)[:60]
+
+        results = asyncio.run(_gather([_test(p) for p in pool.proxies]))
+
+        if c and Table:
+            t = Table(title="Proxy pool")
+            t.add_column("Proxy")
+            t.add_column("OK")
+            t.add_column("Exit IP / error")
+            for url, ok, info in results:
+                t.add_row(url, "yes" if ok else "no", info)
+            c.print(t)
+        else:
+            for url, ok, info in results:
+                print(url, ok, info)
+
+    def _gather(coros):
+        async def runner():
+            import asyncio as _a
+
+            return await _a.gather(*coros)
+
+        return runner()
 
     @app.command()
     def export(

@@ -43,6 +43,22 @@ class BrowserConfig:
     api_key: str | None = None
     headless: bool = True
     launch_path: str | None = None
+    # When true, the browser's own traffic exits through a pool proxy. Local
+    # Chromium cannot change proxy per tab, so this applies to cloud browsers
+    # that accept a proxy configuration at creation time.
+    route_through_pool: bool = False
+
+
+@dataclass
+class ProxyConfig:
+    """Exit-IP pool used to spread per-IP rate limits."""
+
+    enabled: bool = False
+    scheme: str = "http"
+    inline: list[str] = field(default_factory=list)
+    file: str | None = None
+    sticky: bool = True
+
 
 
 @dataclass
@@ -51,6 +67,7 @@ class HarvesterConfig:
     zerotwo: ZeroTwoConfig = field(default_factory=ZeroTwoConfig)
     router: RouterConfig = field(default_factory=RouterConfig)
     browser: BrowserConfig = field(default_factory=BrowserConfig)
+    proxy: ProxyConfig = field(default_factory=ProxyConfig)
     concurrency: int = 1
     output_dir: str = "harvest"
 
@@ -69,6 +86,15 @@ class HarvesterConfig:
         cfg.browser.api_key = os.getenv("BROWSER_USE_API_KEY") or None
         cfg.browser.mode = os.getenv("ZT_BROWSER_MODE", cfg.browser.mode)
         cfg.concurrency = int(os.getenv("ZT_CONCURRENCY", str(cfg.concurrency)))
+        proxies = os.getenv("ZT_PROXIES", "")
+        if proxies.strip():
+            cfg.proxy.enabled = True
+            cfg.proxy.inline = [
+                p for p in proxies.replace(",", "\n").splitlines() if p.strip()
+            ]
+        cfg.proxy.file = os.getenv("ZT_PROXY_FILE") or cfg.proxy.file
+        cfg.proxy.scheme = os.getenv("ZT_PROXY_SCHEME", cfg.proxy.scheme)
+        cfg.proxy.sticky = os.getenv("ZT_PROXY_STICKY", "1") not in ("0", "false", "False")
         for key, value in overrides.items():
             if isinstance(value, dict) and hasattr(cfg, key):
                 section = getattr(cfg, key)
@@ -88,6 +114,24 @@ class HarvesterConfig:
             zerotwo=ZeroTwoConfig(**data.get("zerotwo", {})),
             router=RouterConfig(**data.get("router", {})),
             browser=BrowserConfig(**data.get("browser", {})),
+            proxy=ProxyConfig(**data.get("proxy", {})),
             concurrency=data.get("concurrency", 1),
             output_dir=data.get("output_dir", "harvest"),
         )
+
+    def build_proxy_pool(self) -> "ProxyPool":
+        from .proxy import ProxyPool
+
+        if not self.proxy.enabled:
+            return ProxyPool()
+        pool = ProxyPool(scheme=self.proxy.scheme)
+        for line in self.proxy.inline:
+            pool.add(line)
+        if self.proxy.file:
+            from pathlib import Path
+
+            path = Path(self.proxy.file)
+            if path.exists():
+                for line in path.read_text().splitlines():
+                    pool.add(line)
+        return pool

@@ -57,7 +57,7 @@ class Harvester:
         self.log = log
         self.ledger = Ledger(Path(config.output_dir) / "sessions.jsonl")
 
-    async def _make_cdp(self) -> Any:
+    async def _make_cdp(self, proxy: str | None = None) -> Any:
         b = self.config.browser
         if b.mode == "bridge":
             raise RuntimeError("bridge mode is only available inside the browser harness")
@@ -69,9 +69,18 @@ class Harvester:
         if b.cdp_url:
             cdp = HttpCDP(b.cdp_url, b.api_key)
             return await cdp.connect()
-        raise RuntimeError(
-            "no browser configured: set ZT_CDP_WS, ZT_CDP_URL, or use bridge mode"
+        # No endpoint configured: launch a local Chromium, optionally proxied.
+        from .browser import ChromeLauncher
+
+        launcher = ChromeLauncher(
+            chrome=b.launch_path,
+            proxy=proxy,
+            headless=b.headless,
         )
+        ws = await asyncio.get_event_loop().run_in_executor(None, launcher.start)
+        cdp = await LocalCDP(ws).connect()
+        cdp._launcher = launcher  # type: ignore[attr-defined]
+        return cdp
 
     async def create_one(
         self,
@@ -80,6 +89,7 @@ class Harvester:
         mail: MailProvider,
         router: NineRouterClient | None,
         node_id: str | None,
+        proxy: str | None = None,
     ) -> dict[str, Any]:
         cfg = self.config
         account: dict[str, Any] = {"index": index, "started_at": time.time()}
@@ -87,8 +97,9 @@ class Harvester:
         session: HarvestedSession | None = None
         for attempt in range(1, cfg.zerotwo.max_retries + 2):
             mailbox = await mail.create_mailbox(cfg.mail.domain, cfg.mail.prefix)
-            self.log(f"[{index}] attempt {attempt}: mailbox {mailbox.address}")
-            cdp = await self._make_cdp()
+            self.log(f"[{index}] attempt {attempt}: mailbox {mailbox.address}"
+                     + (f" via {proxy}" if proxy else ""))
+            cdp = await self._make_cdp(proxy)
             try:
                 creator = ZeroTwoCreator(
                     cdp, name=cfg.zerotwo.name, interest=cfg.zerotwo.interest,
@@ -104,6 +115,12 @@ class Harvester:
                     break
                 self.log(f"[{index}] failed: {session.error}")
             finally:
+                launcher = getattr(cdp, "_launcher", None)
+                if launcher:
+                    try:
+                        launcher.stop()
+                    except Exception:  # noqa: BLE001
+                        pass
                 close = getattr(cdp, "close", None)
                 if close:
                     try:
@@ -136,33 +153,43 @@ class Harvester:
 
     async def run(self, count: int) -> dict[str, Any]:
         cfg = self.config
-        async with MailProvider(cfg.mail.base_url) as mail:
-            router: NineRouterClient | None = None
-            node_id: str | None = None
-            if cfg.router.enabled:
-                router = NineRouterClient(
-                    cfg.router.base_url, api_key=cfg.router.api_key, log=self.log
+        pool = cfg.build_proxy_pool()
+        if pool:
+            self.log(f"proxy pool: {len(pool)} exit IPs")
+
+        router: NineRouterClient | None = None
+        node_id: str | None = None
+        if cfg.router.enabled:
+            router = NineRouterClient(
+                cfg.router.base_url, api_key=cfg.router.api_key, log=self.log
+            )
+            if await router.health():
+                node_id = await router.ensure_node(
+                    name=cfg.router.node_name,
+                    base_url=cfg.router.shim_base_url,
+                    prefix=cfg.router.node_prefix,
                 )
-                if await router.health():
-                    node_id = await router.ensure_node(
-                        name=cfg.router.node_name,
-                        base_url=cfg.router.shim_base_url,
-                        prefix=cfg.router.node_prefix,
+                self.log(f"9router online, node={node_id}")
+            else:
+                self.log("9router unreachable - sessions will be saved but not routed "
+                         f"({cfg.router.base_url})")
+                router = None
+
+        sem = asyncio.Semaphore(max(1, cfg.concurrency))
+
+        async def worker(i: int) -> dict[str, Any]:
+            async with sem:
+                proxy = pool.next(key=str(i), sticky=cfg.proxy.sticky) if pool else None
+                proxy_url = proxy.url if proxy else None
+                mail = MailProvider(cfg.mail.base_url, proxy=proxy_url)
+                async with mail:
+                    return await self.create_one(
+                        i, mail=mail, router=router, node_id=node_id,
+                        proxy=proxy_url,
                     )
-                    self.log(f"9router online, node={node_id}")
-                else:
-                    self.log("9router unreachable - sessions will be saved but not routed "
-                             f"({cfg.router.base_url})")
-                    router = None
 
-            sem = asyncio.Semaphore(max(1, cfg.concurrency))
-
-            async def worker(i: int) -> dict[str, Any]:
-                async with sem:
-                    return await self.create_one(i, mail=mail, router=router,
-                                                 node_id=node_id)
-
-            results = await asyncio.gather(*(worker(i) for i in range(1, count + 1)))
+        results = await asyncio.gather(*(worker(i) for i in range(1, count + 1)))
         summary = self.ledger.summary()
+        summary["proxies"] = len(pool)
         self.log(f"done: {summary}")
         return summary

@@ -100,7 +100,17 @@ Chaque compte est enregistré dans `harvest/sessions.jsonl` et dans le tableau d
 | --- | --- |
 | `zt-harvester run -n 5` | Créer + collecter + connecter N comptes |
 | `zt-harvester shim -p 8787` | Lancer le shim ZeroTwo compatible OpenAI |
+| `zt-harvester proxies --check` | Lister et tester le pool de proxys |
 | `zt-harvester export -f csv` | Exporter le registre |
+
+## Pool de proxys
+
+Répartissez les limites par IP en faisant tourner l'IP de sortie par compte. Le pool accepte le format courant `host:port:user:pass`.
+
+```bash
+zt-harvester run -n 10 --proxy-file proxies.txt
+zt-harvester proxies --proxy-file proxies.txt --check
+```
 
 ## API Python
 

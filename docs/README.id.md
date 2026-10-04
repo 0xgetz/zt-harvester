@@ -100,7 +100,17 @@ Setiap akun tersimpan di `harvest/sessions.jsonl` dan di dasbor 9Router.
 | --- | --- |
 | `zt-harvester run -n 5` | Buat + panen + hubungkan N akun |
 | `zt-harvester shim -p 8787` | Jalankan shim ZeroTwo kompatibel OpenAI |
+| `zt-harvester proxies --check` | Daftar & uji pool proxy |
 | `zt-harvester export -f csv` | Ekspor ledger panen |
+
+## Pool Proxy
+
+Sebarkan batas rate per-IP dengan memutar IP keluar tiap akun. Pool menerima format umum `host:port:user:pass`.
+
+```bash
+zt-harvester run -n 10 --proxy-file proxies.txt
+zt-harvester proxies --proxy-file proxies.txt --check
+```
 
 ## API Python
 
