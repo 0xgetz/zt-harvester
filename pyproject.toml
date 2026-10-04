@@ -9,7 +9,7 @@ description = "Bulk ZeroTwo account creator and 9Router session/token/cookie har
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "0xgetz", url = "https://github.com/0xgetz" }]
+authors = [{ name = "0xgetz" }]
 keywords = ["zerotwo", "9router", "harvester", "automation", "openai-compatible", "cdp"]
 classifiers = [
   "Programming Language :: Python :: 3",

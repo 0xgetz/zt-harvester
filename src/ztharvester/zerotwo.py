@@ -91,11 +91,41 @@ class ZeroTwoCreator:
     async def _sleep(self, ms: int) -> None:
         await asyncio.sleep(ms / 1000)
 
+    async def _reset_session(self) -> None:
+        """Clear any persisted ZeroTwo login so the signup screen is shown.
+
+        The SPA keeps the session in memory, so clearing storage alone is not
+        enough: we also do a hard navigation to ``about:blank`` and back to the
+        origin so the app boots fresh.
+        """
+        try:
+            await self.cdp.navigate(f"{self.APP_ORIGIN}/auth/login", wait_ms=8000)
+            await self.cdp.evaluate(
+                "(()=>{try{localStorage.clear();sessionStorage.clear();}catch(e){}"
+                "try{document.cookie.split(';').forEach(c=>{const n=c.split('=')[0].trim();"
+                "document.cookie=n+'=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';});}catch(e){}"
+                "return true;})()"
+            )
+            await self.cdp.navigate("about:blank", wait_ms=3000)
+        except Exception:  # noqa: BLE001
+            pass
+
     async def submit_email(self, email: str) -> bool:
         """Open the signup page, enter the email and trigger the magic link."""
+        await self._reset_session()
         await self.cdp.navigate(f"{self.APP_ORIGIN}/c", wait_ms=12000)
-        await self._sleep(2500)
+        await self._sleep(3000)
         # Make sure we are on the email-entry screen.
+        on_entry = await self.cdp.evaluate("!!document.querySelector('#email')")
+        if not on_entry:
+            # Session persisted: force the login route and clear storage.
+            await self._reset_session()
+            await self.cdp.navigate(f"{self.APP_ORIGIN}/auth/login", wait_ms=12000)
+            for _ in range(10):
+                await self._sleep(1500)
+                if await self.cdp.evaluate("!!document.querySelector('#email')"):
+                    on_entry = True
+                    break
         ok = await self.cdp.evaluate(
             """(()=>{
               const i=document.querySelector('#email');
@@ -195,13 +225,27 @@ class ZeroTwoCreator:
 
     @staticmethod
     def extract_link(msg: Any) -> str | None:
-        """Pull the ZeroTwo confirmation link out of a mail message."""
+        """Pull the ZeroTwo confirmation link out of a mail message.
+
+        Confirmation links are SendGrid click-tracking URLs; asset/image URLs
+        embedded in the HTML must be ignored.
+        """
         candidates = LINK_RE.findall(getattr(msg, "text", "") or "")
         candidates += LINK_RE.findall(getattr(msg, "html", "") or "")
-        for url in candidates:
-            if "sendgrid" in url or "zerotwo" in url:
-                return url
-        return candidates[0] if candidates else None
+        skip = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".css", ".js",
+                "placeholder", "assets/", "/wf/open", "unsubscribe")
+        tracked = [u for u in candidates if "sendgrid" in u and not any(s in u for s in skip)]
+        if tracked:
+            return tracked[0]
+        confirm = [
+            u for u in candidates
+            if any(k in u for k in ("confirm", "verify", "magic", "auth"))
+            and not any(s in u for s in skip)
+        ]
+        if confirm:
+            return confirm[0]
+        clean = [u for u in candidates if not any(s in u for s in skip)]
+        return clean[0] if clean else None
 
     async def collect(self, session: HarvestedSession) -> None:
         """Read token, refresh token, user and cookies from the live page."""
