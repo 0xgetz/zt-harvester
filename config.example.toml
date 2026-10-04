@@ -1,0 +1,27 @@
+# zt-harvester configuration
+concurrency = 1
+output_dir = "harvest"
+
+[mail]
+base_url = "https://api.mail.tm"
+# domain = "maxxspace.com"   # optional, picks a random active domain if empty
+prefix = "zt"
+
+[zerotwo]
+name = "Burz"
+interest = "Just exploring"
+wait_seconds = 240.0
+max_retries = 2
+
+[router]
+enabled = true
+base_url = "http://localhost:20128"
+api_key = "sk_9router"
+shim_base_url = "http://localhost:8787/v1"
+node_name = "ZeroTwo (shim)"
+node_prefix = "zerotwo"
+
+[browser]
+mode = "cdp"          # cdp | cloud
+cdp_ws = "ws://127.0.0.1:9222/devtools/browser/<id>"
+headless = false

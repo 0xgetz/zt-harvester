@@ -1,0 +1,44 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="zt-harvester logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="1" stop-color="#141a33"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#c084fc"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#f472b6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g opacity="0.20" stroke="#4f5b93" stroke-width="2">
+    <path d="M0 128h512M0 256h512M0 384h512M128 0v512M256 0v512M384 0v512"/>
+  </g>
+  <!-- concentric orbit rings -->
+  <circle cx="256" cy="256" r="150" fill="none" stroke="url(#ring)" stroke-width="6" opacity="0.45" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="108" fill="none" stroke="url(#flow)" stroke-width="4" opacity="0.6" stroke-dasharray="14 10"/>
+  <!-- harvest core: central node -->
+  <circle cx="256" cy="256" r="44" fill="url(#flow)" filter="url(#glow)"/>
+  <path d="M238 256l12 14 22-30" fill="none" stroke="#0b1020" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- satellite nodes -->
+  <g fill="#22d3ee"><circle cx="256" cy="106" r="15"/></g>
+  <g fill="#c084fc"><circle cx="406" cy="256" r="15"/></g>
+  <g fill="#f472b6"><circle cx="256" cy="406" r="15"/></g>
+  <g fill="#818cf8"><circle cx="106" cy="256" r="15"/></g>
+  <!-- connector links -->
+  <g stroke="url(#flow)" stroke-width="5" stroke-linecap="round" opacity="0.85">
+    <path d="M256 121v91M391 256h-91M256 391v-91M121 256h91"/>
+  </g>
+  <!-- token ticks flowing right -->
+  <g stroke="#22d3ee" stroke-width="4" stroke-linecap="round" opacity="0.8">
+    <path d="M330 190h44M348 220h44M330 250h44"/>
+  </g>
+</svg>
